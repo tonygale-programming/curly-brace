@@ -3,6 +3,16 @@
 What changed in Brace, day by day. Newest first. Each day lists what people using the site would notice,
 then changes behind the scenes. Release versions match the `?v=` value in `index.html`.
 
+## 15 November 2026
+
+Release `2026-11-15.1`.
+
+**Moved**
+- The project is renamed from `brace` to `curly-brace`. The site is now at
+  https://tonygale-programming.github.io/curly-brace/ and the code at https://github.com/tonygale-programming/curly-brace.
+  The old address no longer works, because GitHub Pages does not redirect after a rename.
+- Link previews, the canonical address and the GitHub link in the header point to the new address.
+
 ## 13 November 2026
 
 Releases `2026-11-13.1` to `2026-11-13.12`.

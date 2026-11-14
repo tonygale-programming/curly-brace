@@ -5,8 +5,8 @@
 A JSON formatter, validator and repair tool that runs entirely in the browser.
 Plain HTML, CSS and JavaScript modules, no build step, no server.
 
-- Live site: https://tonygale-programming.github.io/brace/ (GitHub Pages, deploys from `main`)
-- Repo: https://github.com/tonygale-programming/brace (public, MIT)
+- Live site: https://tonygale-programming.github.io/curly-brace/ (GitHub Pages, deploys from `main`)
+- Repo: https://github.com/tonygale-programming/curly-brace (public, MIT)
 - `README.md` covers features, privacy, file structure, releasing and code style. Read it first.
 - `ROADMAP.md` holds the ideas waiting to be built, the rules for accepting ideas, and the "Not doing" list.
 - `CHANGELOG.md` is the day-by-day history. Add an entry for every release.

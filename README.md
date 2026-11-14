@@ -2,7 +2,7 @@
 
 Format, validate and repair JSON in your browser. **Private: nothing you paste leaves your device.**
 
-**Open it:** https://tonygale-programming.github.io/brace/
+**Open it:** https://tonygale-programming.github.io/curly-brace/
 
 ## Why Brace
 
