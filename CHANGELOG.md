@@ -5,7 +5,7 @@ then changes behind the scenes. Release versions match the `?v=` value in `index
 
 ## 15 November 2026
 
-Releases `2026-11-15.1` and `2026-11-15.2`.
+Releases `2026-11-15.1` to `2026-11-15.3`.
 
 **Moved**
 - The project is renamed from `brace` to `curly-brace`. The site is now at
@@ -14,7 +14,7 @@ Releases `2026-11-15.1` and `2026-11-15.2`.
 - Link previews, the canonical address and the GitHub link in the header point to the new address.
 
 **Improved**
-- New browser-tab icon by Tony: a yellow circle with a black outline and bolder braces, easier to spot among tabs.
+- New browser-tab icon by Tony: a yellow circle with a 2px black outline and braces, easy to spot among tabs.
 
 ## 13 November 2026
 
