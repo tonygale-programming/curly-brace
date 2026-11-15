@@ -5,13 +5,16 @@ then changes behind the scenes. Release versions match the `?v=` value in `index
 
 ## 15 November 2026
 
-Release `2026-11-15.1`.
+Releases `2026-11-15.1` and `2026-11-15.2`.
 
 **Moved**
 - The project is renamed from `brace` to `curly-brace`. The site is now at
   https://tonygale-programming.github.io/curly-brace/ and the code at https://github.com/tonygale-programming/curly-brace.
   The old address no longer works, because GitHub Pages does not redirect after a rename.
 - Link previews, the canonical address and the GitHub link in the header point to the new address.
+
+**Improved**
+- New browser-tab icon by Tony: a yellow circle with a black outline and bolder braces, easier to spot among tabs.
 
 ## 13 November 2026
 
