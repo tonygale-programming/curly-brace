@@ -4,7 +4,7 @@ Ideas waiting to be built. Nothing here is implemented yet.
 
 ## How an idea gets in
 
-Brace stays one screen that anyone understands in five seconds, and code anyone can read.
+Curly Brace stays one screen that anyone understands in five seconds, and code anyone can read.
 An idea is welcome when it:
 
 - **solves something people hit often**, not a rare edge case,
@@ -20,14 +20,29 @@ Each is small (S = an hour or two, M = about a day).
 
 | Idea | Why it helps | How, simply | Size |
 |---|---|---|---|
-| **Remember the output mode** | Someone who always minifies has to click Minify every visit | Save Format / Minify / Stringify like the indent setting already is | S |
-| **Expand to level 1, 2, 3** | "Expand all" on big data is too much; "Collapse all" is too little | Give the Expand all button a small menu: 1 · 2 · 3 · All | S |
-| **Wrap long lines** | Long string values push the formatted view far to the right | A "Wrap" toggle in the result header. CSS already exists for wrapped lines (used by Minify) | S |
-| **Text size** | Small screens and presentations need bigger code text | `A−` / `A+` in the result header changes one CSS variable for code size; remembered like the theme | S |
+| **Indent as `2 · 4 · Tab` segments** | One click instead of opening a dropdown, and the choice is always visible | The same segmented control as Text · Tree; removes the custom dropdown code | S |
+| **Cursor position** | Developers expect "Ln 12, Col 5" next to line numbers | Show it in the status row, from `selectionStart` and the existing `getLineAndColumn` | S |
+| **Remember the output mode** | Someone who always minifies has to click Minify every visit | Remember the last of Format / Minify for paste and open, like the indent setting | S |
+| **Wrap long lines** | Long string values push the text far to the right | A "Wrap" toggle next to Text · Tree; remembered like the theme | S |
+| **Expand to level 1, 2, 3** | "Expand all" on big data is too much; "Collapse all" is too little | Give the Expand / Collapse button a small menu: 1 · 2 · 3 · All | S |
+| **Keyboard navigation** | Moving through the tree with the mouse only is slow | Arrow keys in the tree (open, close, next, previous) and between Text · Tree | M |
+| **Text size** | Small screens and presentations need bigger code text | `A−` / `A+` changes one CSS variable for code size; remembered like the theme | S |
+
+## Housekeeping
+
+- **Sync the design system artifact** with what is live: one field, Lucide 16px icons, the olive dark-mode
+  accent, plain toasts, borderless header buttons, the Curly Brace name and the new tab icon.
+- **Match the installed-app icons** to the new tab icon (kept as they are for now).
+- Still to decide: a "Buy me a coffee" link, and Roboto versus IBM Plex.
+
+## Bigger: large files
+
+Files over 10 MB are refused today, because parsing, colouring and drawing them freezes the tab.
+Parsing in a Web Worker and drawing only the visible lines would lift the limit. Worth it only if people ask.
 
 ## Done
 
-Built in the 12 November 2026 redesign (see CHANGELOG.md): Download as file, Undo Clear, Copy a value from the tree, Drop a file anywhere, Keyboard shortcuts list, Show the error from the status bar. Input / Result tabs on phones are no longer needed, because there is only one field.
+Built (see CHANGELOG.md): Download as file, Copy a value from the tree, Drop a file anywhere, Keyboard shortcuts and their list, "Show in input" for errors, one Expand / Collapse button, Stringify. `⌘Z` undoes Clear, Sample and Repair, so toasts need no Undo button. Input / Result tabs on phones are no longer needed, because there is only one field.
 
 ## Phase 2: messy real-world JSON
 
@@ -49,7 +64,7 @@ Built in the 12 November 2026 redesign (see CHANGELOG.md): Download as file, Und
 
 - A short custom domain
 - Launch posts: Hacker News "Show HN", Reddit r/webdev, Product Hunt. Lead with privacy you can verify
-- A browser extension that opens JSON URLs in Brace
+- A browser extension that opens JSON URLs in Curly Brace
 
 ## Not doing
 

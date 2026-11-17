@@ -1,7 +1,38 @@
 # Changelog
 
-What changed in Brace, day by day. Newest first. Each day lists what people using the site would notice,
+What changed in Curly Brace (called Brace until 17 November 2026), day by day. Newest first. Each day lists what people using the site would notice,
 then changes behind the scenes. Release versions match the `?v=` value in `index.html`.
+
+## 17 November 2026
+
+Release `2026-11-17.1`.
+
+**Renamed**
+- The app is now called **Curly Brace**: the page title, the logo `{Curly Brace}`, the installed app's name,
+  and the download name `curly-brace.json`. Saved settings (theme, indent, sort keys) carry over.
+
+**Safer**
+- The JSON in the field is now kept for this tab only: it survives a reload, but is gone when the tab closes.
+  Before, it stayed in the browser indefinitely. The old saved copy is deleted on the first visit.
+
+**Fixed**
+- Shortcuts no longer change the JSON behind the open shortcuts window.
+- Selecting all the text and pasting over it now formats the pasted JSON, like pasting into an empty field.
+- Sort keys gives the same order on every computer (by character code, like `jq -S`: capitals first).
+- Right after a release, the offline copy could be saved from the browser's cache and break offline use.
+  It is now always fetched fresh.
+- Files over 10 MB are refused with a message, instead of freezing the tab.
+
+**Faster**
+- Typing no longer redraws every line number on each key press, only when the number of lines changes.
+
+**Behind the scenes**
+- `js/main.js` is split: `files.js` (opening and dropping files), `tree-panel.js` (the tree's controls),
+  `sort-memory.js` (the key order before sorting). Unused exports and a stale comment are gone.
+- Tests are now in the repo: unit tests (`tests/unit`, plain Node) and browser tests (`tests/browser`,
+  installed Chrome). A GitHub Action runs them and `release.py --check` on every push.
+- `scripts/release.py --check` verifies a release before pushing, and the script refuses to go back a version.
+- The link-preview image has its source in `scripts/preview-image.html`.
 
 ## 15 November 2026
 
