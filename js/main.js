@@ -1,5 +1,5 @@
 /**
- * Brace JSON Formatter: entry point.
+ * Curly Brace JSON Formatter: entry point.
  *
  * One field holds the JSON. Format, Minify and Stringify rewrite it in place (Ctrl/⌘+Z goes back),
  * and everything else follows whatever is in the field: the status row, the error card,
@@ -12,18 +12,20 @@ import { getLineAndColumn } from './syntax-checker.js';
 import { createEditor } from './editor.js';
 import { createErrorCard } from './error-card.js';
 import { createStatusBar } from './status-bar.js';
-import { renderTree, expandAll, collapseAll, selectNode, EXPAND_ALL_LIMIT } from './tree-view.js';
+import { createTreePanel } from './tree-panel.js';
+import { createSortMemory } from './sort-memory.js';
+import { readFileAsText, acceptDroppedFiles } from './files.js';
 import { showToast, copyToClipboard, LONG_TOAST_MS } from './notifications.js';
-import { bindShortcuts, renderShortcutList } from './keyboard.js';
+import { bindShortcuts, setUpShortcutsDialog } from './keyboard.js';
 import { saveTextAsFile } from './download.js';
-import { loadSetting, saveSetting } from './storage.js';
+import { loadSetting, saveSetting, loadDraft, saveDraft, migrateOldSettings } from './storage.js';
 import { toggleTheme } from './theme.js';
 import { enableOfflineUse } from './offline.js';
 
 const TYPING_DELAY_MS = 180;
-const MAX_SAVED_DRAFT_LENGTH = 500_000; // characters; larger inputs are not remembered
-const BYTE_ORDER_MARK = /^﻿/;
-const DEFAULT_FILE_NAME = 'brace.json';
+const MAX_SAVED_DRAFT_LENGTH = 500_000; // characters; larger inputs are not kept on reload
+const BYTE_ORDER_MARK = /^\uFEFF/; // some editors put this invisible mark at the start of a file
+const DEFAULT_FILE_NAME = 'curly-brace.json';
 
 const SAMPLE_JSON = '{"order":{"id":"ORD-20419","placedAt":"2026-11-08T09:41:27Z","status":"shipped","customer":{"name":"Mara Lindqvist","email":"mara@example.com","loyaltyTier":"gold"},"items":[{"sku":"KB-7720","title":"Mechanical keyboard, 75% layout","qty":1,"unitPrice":129.0},{"sku":"CB-0031","title":"Braided USB-C cable, 2 m","qty":2,"unitPrice":14.5}],"shipping":{"carrier":"DHL","tracking":"JD014600006281990","address":{"line1":"Sveavägen 44","city":"Stockholm","postcode":"111 34","country":"SE"}},"totals":{"subtotal":158.0,"shipping":0,"tax":39.5,"currency":"EUR"},"giftWrap":false,"notes":null}}';
 
@@ -44,13 +46,6 @@ const elements = {
   clearButton: getElement('clear-button'),
   textTab: getElement('text-tab'),
   treeTab: getElement('tree-tab'),
-  treeView: getElement('tree-view'),
-  treeRoot: getElement('tree-root'),
-  expandToggle: getElement('expand-toggle'),
-  pathBar: getElement('path-bar'),
-  selectedPath: getElement('selected-path'),
-  copyPathButton: getElement('copy-path-button'),
-  copyValueButton: getElement('copy-value-button'),
   errorRepairButton: getElement('error-repair-button'),
   errorShowButton: getElement('error-show-button'),
   downloadButton: getElement('download-button'),
@@ -58,7 +53,6 @@ const elements = {
   themeButton: getElement('theme-button'),
   shortcutsButton: getElement('shortcuts-button'),
   shortcutsDialog: getElement('shortcuts-dialog'),
-  shortcutsCloseButton: getElement('shortcuts-close-button'),
 };
 
 const editor = createEditor({
@@ -82,14 +76,23 @@ const statusBar = createStatusBar({
   stats: getElement('stats'),
 });
 
+const treePanel = createTreePanel({
+  view: getElement('tree-view'),
+  root: getElement('tree-root'),
+  pathBar: getElement('path-bar'),
+  selectedPath: getElement('selected-path'),
+  expandToggle: getElement('expand-toggle'),
+  copyPathButton: getElement('copy-path-button'),
+  copyValueButton: getElement('copy-value-button'),
+}, { getIndent });
+
+const sortMemory = createSortMemory();
+
 const state = {
-  lastAction: 'format',     // 'format', 'minify' or 'stringify': re-applied when Sort keys changes
-  parsed: null,             // { data, isStringified } while the field holds valid JSON
-  unsortedData: null,       // the data before Sort keys was turned on, so turning it off restores the order
-  sortedText: null,         // the field's text right after sorting; any edit makes the old order stale
-  errorLocation: null,      // { position, line, column } while it doesn't
-  view: 'text',             // 'text' or 'tree'
-  selectedValue: undefined, // the tree node shown in the path bar, for "Copy value"
+  lastAction: 'format', // 'format', 'minify' or 'stringify': re-applied when Sort keys changes
+  parsed: null,         // { data, isStringified } while the field holds valid JSON
+  errorLocation: null,  // { position, line, column } while it doesn't
+  view: 'text',         // 'text' or 'tree'
   fileName: DEFAULT_FILE_NAME,
 };
 
@@ -126,8 +129,8 @@ function refresh() {
     }
   }
 
-  updateButtons();
-  if (state.view === 'tree') showView(state.parsed ? 'tree' : 'text');
+  // Leave the tree if the JSON stopped being valid; otherwise this redraws it for the new text
+  showView(state.view === 'tree' && state.parsed ? 'tree' : 'text');
 }
 
 /** A control that can't do anything right now is disabled, rather than explaining after the click. */
@@ -142,30 +145,29 @@ function updateButtons() {
   elements.formatButton.disabled = !canShapeText;
   elements.minifyButton.disabled = !canShapeText;
   // Text that Stringify made is already one escaped string; stringifying it again would only add backslashes
-  elements.stringifyButton.disabled = !canShapeText || state.parsed.isStringified;
+  elements.stringifyButton.disabled = !canShapeText || Boolean(state.parsed?.isStringified);
   elements.indentSelect.disabled = state.view === 'tree';
   elements.repairButton.disabled = !(isInvalid && canRepair);
   elements.clearButton.disabled = !getFieldText().trim();
+}
+
+function keepDraft(text) {
+  if (text.length <= MAX_SAVED_DRAFT_LENGTH) saveDraft(text);
 }
 
 function handleTyping() {
   clearTimeout(typingTimer);
   typingTimer = setTimeout(() => {
     refresh();
-    saveDraft(editor.getText());
+    keepDraft(editor.getText());
   }, TYPING_DELAY_MS);
-}
-
-function saveDraft(text) {
-  if (text.length <= MAX_SAVED_DRAFT_LENGTH) saveSetting('draft', text);
 }
 
 /** Replaces the field's text (Ctrl/⌘+Z can bring the old one back) and updates everything. */
 function replaceFieldText(text) {
-  const canUndo = editor.setText(text);
+  editor.setText(text);
   refresh();
-  saveDraft(text);
-  return canUndo;
+  keepDraft(text);
 }
 
 /* ---------- Format, Minify, Stringify ---------- */
@@ -193,14 +195,13 @@ function applyAction(action) {
   // Stringify, and makes pressing Stringify twice give the same result instead of more backslashes.
   const { data } = state.parsed;
   const sourceData = unwrapStringifiedJson(data) ?? data;
-
-  // Edited since sorting: the order the visitor now sees becomes the one to come back to.
-  if (isSortingKeys() && editor.getText() !== state.sortedText) state.unsortedData = sourceData;
+  const isSorting = isSortingKeys();
+  if (isSorting) sortMemory.beforeSorting(editor.getText(), sourceData);
 
   state.lastAction = action;
   const output = buildOutput(sourceData, action);
   replaceFieldText(output);
-  state.sortedText = isSortingKeys() ? output : null;
+  if (isSorting) sortMemory.afterSorting(output);
 }
 
 function changeIndent() {
@@ -208,10 +209,7 @@ function changeIndent() {
   if (state.parsed) applyAction('format');
 }
 
-/**
- * On: sorts the keys and remembers the order before. Off: brings that order back, as long as the
- * JSON wasn't edited in between (after an edit the old order no longer matches, so the text stays).
- */
+/** On: sorts the keys. Off: brings the earlier order back, unless the JSON was edited in between. */
 function toggleSortKeys() {
   const isOn = !isSortingKeys();
   elements.sortKeysButton.setAttribute('aria-pressed', String(isOn));
@@ -219,20 +217,19 @@ function toggleSortKeys() {
   if (!state.parsed) return;
 
   if (isOn) {
-    state.unsortedData = unwrapStringifiedJson(state.parsed.data) ?? state.parsed.data;
-    state.sortedText = null;
     applyAction(state.lastAction);
     return;
   }
-  const isUnchangedSinceSorting = state.unsortedData !== null && editor.getText() === state.sortedText;
-  if (isUnchangedSinceSorting) replaceFieldText(buildOutput(state.unsortedData, state.lastAction));
-  state.unsortedData = null;
-  state.sortedText = null;
+  const unsortedData = sortMemory.takeUnsortedData(editor.getText());
+  if (unsortedData !== null) replaceFieldText(buildOutput(unsortedData, state.lastAction));
 }
 
-/** Pasting into an empty field formats it straight away; one Undo brings back what was pasted. */
+/**
+ * Pasting into an empty field, or over all of its text, formats it straight away;
+ * one Undo brings back what was pasted.
+ */
 function handlePaste() {
-  if (getFieldText().trim()) return;
+  if (getFieldText().trim() && !editor.isAllSelected()) return;
   // The pasted text arrives after this event, so wait for it.
   setTimeout(() => {
     refresh();
@@ -241,6 +238,8 @@ function handlePaste() {
 }
 
 /* ---------- Repair, Sample, Clear, files ---------- */
+
+// Each of these goes through the editor's undoable replace, so Ctrl/⌘+Z brings the earlier text back.
 
 function repairInput() {
   const text = editor.getText();
@@ -259,34 +258,38 @@ function repairInput() {
     showToast('Repair cannot fix this one. Fix it by hand using the error details.', { durationMs: LONG_TOAST_MS });
     return;
   }
-  replaceFieldText(repairedText); // Ctrl/⌘+Z still brings the original back
+  replaceFieldText(repairedText);
   showToast('Repaired');
+}
+
+function formattedSample() {
+  return buildOutput(readJson(SAMPLE_JSON).data, 'format');
 }
 
 function loadSample() {
   state.fileName = DEFAULT_FILE_NAME;
-  replaceFieldText(buildOutput(readJson(SAMPLE_JSON).data, 'format')); // Ctrl/⌘+Z brings back what was there
+  replaceFieldText(formattedSample());
   showToast('Sample loaded');
 }
 
 function clearField() {
   state.fileName = DEFAULT_FILE_NAME;
-  replaceFieldText(''); // Ctrl/⌘+Z still brings the text back
+  replaceFieldText('');
   showToast('Cleared');
   elements.input.focus();
 }
 
-function openFile(file) {
+async function openFile(file) {
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
+  try {
+    const text = await readFileAsText(file);
     state.fileName = file.name;
-    replaceFieldText(String(reader.result));
+    replaceFieldText(text);
     if (state.parsed) applyAction('format');
     showToast(`Opened ${file.name}`);
-  };
-  reader.onerror = () => showToast(`Could not read ${file.name}`);
-  reader.readAsText(file);
+  } catch (error) {
+    showToast(error.message, { durationMs: LONG_TOAST_MS });
+  }
 }
 
 function showErrorInInput() {
@@ -299,53 +302,18 @@ function showErrorInInput() {
 
 function showView(view) {
   const isTree = view === 'tree' && Boolean(state.parsed);
-  const wasTree = state.view === 'tree';
   state.view = isTree ? 'tree' : 'text';
 
   elements.textTab.setAttribute('aria-selected', String(!isTree));
   elements.treeTab.setAttribute('aria-selected', String(isTree));
   elements.editor.hidden = isTree;
-  elements.treeView.hidden = !isTree;
-  elements.expandToggle.hidden = !isTree;
-  elements.pathBar.hidden = !isTree;
-
-  // Rebuild the tree when it opens or the JSON changed under it; keep it while just switching back
-  if (isTree && (!wasTree || elements.treeRoot.dataset.source !== editor.getText())) {
-    renderTree(elements.treeRoot, state.parsed.data);
-    elements.treeRoot.dataset.source = editor.getText();
-    elements.selectedPath.textContent = '$';
-    elements.expandToggle.setAttribute('aria-expanded', 'false');
-    state.selectedValue = state.parsed.data;
-  }
+  treePanel.setVisible(isTree);
+  if (isTree) treePanel.show(state.parsed.data, editor.getText());
   updateButtons();
 }
 
-function selectTreeKey(event) {
-  if (!event.target.classList.contains('tree-key')) return;
-  event.preventDefault();
-  const selection = selectNode(elements.treeRoot, event.target);
-  if (!selection) return;
-  elements.selectedPath.textContent = selection.path;
-  state.selectedValue = selection.value;
-}
-
-function copySelectedValue() {
-  const value = state.selectedValue;
-  // A string is copied as its text; anything else as JSON
-  const text = typeof value === 'string' ? value : stringifyJson(value, getIndent());
-  copyToClipboard(text, 'Copied value', elements.selectedPath);
-}
-
-/** One button: Expand all, then Collapse all. Its label always says what the next press does. */
-function toggleTreeExpansion() {
-  const isExpanded = elements.expandToggle.getAttribute('aria-expanded') === 'true';
-  if (isExpanded) {
-    collapseAll(elements.treeRoot);
-  } else {
-    const isComplete = expandAll(elements.treeRoot);
-    if (!isComplete) showToast(`Expanded the first ${EXPAND_ALL_LIMIT.toLocaleString()} nodes`);
-  }
-  elements.expandToggle.setAttribute('aria-expanded', String(!isExpanded));
+function toggleView() {
+  if (!elements.treeTab.disabled) showView(state.view === 'tree' ? 'text' : 'tree');
 }
 
 /* ---------- Download and Copy ---------- */
@@ -359,42 +327,14 @@ function copyField() {
   copyToClipboard(editor.getText(), 'Copied', elements.input);
 }
 
-/* ---------- Events ---------- */
-
-const hasFiles = (event) => Boolean(event.dataTransfer?.types.includes('Files'));
-
-/** A file can be dropped anywhere on the page; the field lights up while one is dragged over. */
-function bindFileDrop() {
-  const showDropTarget = (event) => {
-    if (!hasFiles(event)) return;
-    event.preventDefault();
-    elements.editorPane.classList.add('is-dragging');
-  };
-  const hideDropTarget = () => elements.editorPane.classList.remove('is-dragging');
-
-  document.addEventListener('dragenter', showDropTarget);
-  document.addEventListener('dragover', showDropTarget);
-  document.addEventListener('dragleave', (event) => {
-    if (!event.relatedTarget) hideDropTarget(); // the pointer left the window
-  });
-  document.addEventListener('drop', (event) => {
-    hideDropTarget();
-    if (!event.dataTransfer?.files.length) return;
-    event.preventDefault();
-    openFile(event.dataTransfer.files[0]);
-  });
-}
+/* ---------- Shortcuts ---------- */
 
 /** Presses a button the way a click would, so a shortcut does nothing while its button is disabled. */
 function press(button) {
   if (!button.disabled) button.click();
 }
 
-function toggleView() {
-  if (!elements.treeTab.disabled) showView(state.view === 'tree' ? 'text' : 'tree');
-}
-
-/* The one list of shortcuts: it drives the keys, the shortcuts dialog and the button tooltips. */
+/* The one list of shortcuts: it drives the keys, the shortcuts window and the button tooltips. */
 const SHORTCUTS = [
   { group: 'Change the JSON', label: 'Format', button: elements.formatButton, run: () => press(elements.formatButton),
     keys: [{ shift: true, option: true, key: 'F', code: 'KeyF' }, { command: true, key: 'Enter', code: 'Enter' }] },
@@ -417,18 +357,7 @@ const SHORTCUTS = [
     keys: [{ key: '?', character: '?' }] },
 ];
 
-/**
- * Closes a dialog when a click lands on the dimmed area around it. The browser reports those clicks on the
- * dialog itself, so the click's position decides whether it was inside the window or outside.
- */
-function closeOnOutsideClick(dialog) {
-  dialog.addEventListener('click', (event) => {
-    const box = dialog.getBoundingClientRect();
-    const isOutside = event.clientX < box.left || event.clientX > box.right
-      || event.clientY < box.top || event.clientY > box.bottom;
-    if (isOutside) dialog.close();
-  });
-}
+/* ---------- Events ---------- */
 
 function bindEvents() {
   elements.input.addEventListener('input', handleTyping);
@@ -444,37 +373,27 @@ function bindEvents() {
     openFile(elements.fileInput.files[0]);
     elements.fileInput.value = ''; // lets the same file be opened again
   });
+  acceptDroppedFiles(elements.editorPane, openFile);
   elements.sampleButton.addEventListener('click', loadSample);
   elements.repairButton.hidden = !canRepair;
   elements.repairButton.addEventListener('click', repairInput);
   elements.errorRepairButton.addEventListener('click', repairInput);
-  elements.clearButton.addEventListener('click', clearField);
-  bindFileDrop();
-
   elements.errorShowButton.addEventListener('click', showErrorInInput);
+  elements.clearButton.addEventListener('click', clearField);
 
   elements.textTab.addEventListener('click', () => showView('text'));
   elements.treeTab.addEventListener('click', () => showView('tree'));
-  elements.expandToggle.addEventListener('click', toggleTreeExpansion);
-  elements.treeRoot.addEventListener('click', selectTreeKey);
-  elements.treeRoot.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') selectTreeKey(event);
-  });
-  elements.copyPathButton.addEventListener('click', () => {
-    copyToClipboard(elements.selectedPath.textContent, 'Copied path', elements.selectedPath);
-  });
-  elements.copyValueButton.addEventListener('click', copySelectedValue);
-
   elements.downloadButton.addEventListener('click', downloadField);
   elements.copyButton.addEventListener('click', copyField);
-
   elements.themeButton.addEventListener('click', toggleTheme);
-  elements.shortcutsButton.addEventListener('click', () => elements.shortcutsDialog.showModal());
-  elements.shortcutsCloseButton.addEventListener('click', () => elements.shortcutsDialog.close());
-  closeOnOutsideClick(elements.shortcutsDialog);
 
   bindShortcuts(SHORTCUTS);
-  renderShortcutList(getElement('shortcut-groups'), SHORTCUTS);
+  setUpShortcutsDialog({
+    dialog: elements.shortcutsDialog,
+    list: getElement('shortcut-groups'),
+    openButton: elements.shortcutsButton,
+    closeButton: getElement('shortcuts-close-button'),
+  }, SHORTCUTS);
 }
 
 /* ---------- Start ---------- */
@@ -486,13 +405,14 @@ function restorePreferences() {
   elements.sortKeysButton.setAttribute('aria-pressed', String(loadSetting('sort') === '1'));
 }
 
+/** A reload keeps the field's text (for this tab only); a new tab starts with the sample. */
 function loadInitialText() {
-  const draft = loadSetting('draft');
-  const initialText = draft?.trim() ? draft : buildOutput(readJson(SAMPLE_JSON).data, 'format');
-  editor.setText(initialText, { undoable: false });
+  const draft = loadDraft();
+  editor.setText(draft?.trim() ? draft : formattedSample(), { undoable: false });
   refresh();
 }
 
+migrateOldSettings();
 bindEvents();
 restorePreferences();
 loadInitialText();

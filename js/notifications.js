@@ -3,7 +3,7 @@
  */
 import { describeKeys } from './keyboard.js';
 
-export const SHORT_TOAST_MS = 1600;
+const SHORT_TOAST_MS = 1600;
 export const LONG_TOAST_MS = 4000; // for messages with a full sentence to read
 
 const toast = document.getElementById('toast');

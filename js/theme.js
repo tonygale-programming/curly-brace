@@ -15,7 +15,7 @@ function getSystemTheme() {
 }
 
 /** The theme on screen right now: the saved choice, or the system's when there is none. */
-export function getCurrentTheme() {
+function getCurrentTheme() {
   return document.documentElement.dataset.theme ?? getSystemTheme();
 }
 

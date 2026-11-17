@@ -1,5 +1,5 @@
 /*
- * Brace JSON Formatter styles, following the Brace design system.
+ * Curly Brace JSON Formatter styles, following Tony's design system.
  *
  * Layout: one column. The header, two rows of controls, one field that fills the window, and a status row.
  *
@@ -62,7 +62,7 @@
 }
 
 /* ---------- Theme ----------
- * Colours come from the Brace design system (https://claude.ai/artifact/G2fKVhvYDpQxE6Rzz2rTHh).
+ * Colours come from the design system (https://claude.ai/artifact/G2fKVhvYDpQxE6Rzz2rTHh).
  * Each is written once as light-dark(<light value>, <dark value>); the browser picks one by color-scheme:
  *   no data-theme      → follows the system setting
  *   data-theme="light" → always light
@@ -96,7 +96,6 @@
   --focus: #ffbf00; /* keyboard focus ring, both themes */
 
   /* States */
-  --success: light-dark(#0a5c1f, #99ffb3);
   --success-fill: #99ffb3;
   --on-success: #0a5c1f;
   --danger: light-dark(#b3261e, #ffb4ab);

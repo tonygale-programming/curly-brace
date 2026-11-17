@@ -41,7 +41,7 @@ function buildStatsHtml(text, structure) {
 
   if (preservedNumberCount > 0) {
     const noun = preservedNumberCount === 1 ? 'number' : 'numbers';
-    html += `<span title="Plain JSON.parse would round these. Brace keeps them exactly as written.">`
+    html += `<span title="Plain JSON.parse would round these. Curly Brace keeps them exactly as written.">`
       + `<b>${preservedNumberCount.toLocaleString()}</b> ${noun} kept exact</span>`;
   }
   return html;

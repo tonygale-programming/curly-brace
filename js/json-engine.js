@@ -2,20 +2,21 @@
  * All JSON reading, writing and repairing goes through this module.
  *
  * lossless-json keeps every number exactly as written, and jsonrepair fixes broken JSON.
- * Both are loaded as plain scripts in index.html and expose browser globals.
- * If the CDN can't be reached, we fall back to the built-in JSON object and turn Repair off.
+ * Both are loaded as plain scripts (vendor/ in index.html) and set globals. If either fails to load,
+ * this falls back to the built-in JSON object and turns Repair off. globalThis rather than window,
+ * so the unit tests can load the same libraries in Node.
  */
 import { findSyntaxError } from './syntax-checker.js';
 
-const losslessJson = window.LosslessJSON ?? null;
-const jsonRepair = window.JSONRepair?.jsonrepair ?? null;
+const losslessJson = globalThis.LosslessJSON ?? null;
+const jsonRepair = globalThis.JSONRepair?.jsonrepair ?? null;
 
 const POSITION_PATTERN = /at position (\d+)/;
 const DUPLICATE_KEY_PATTERN = /^Duplicate key '(.*)' encountered/;
 
 export const canRepair = jsonRepair !== null;
 
-export function parseJson(text) {
+function parseJson(text) {
   return losslessJson ? losslessJson.parse(text) : JSON.parse(text);
 }
 
@@ -71,7 +72,7 @@ export function repairJson(text) {
 }
 
 /** True for a number parsed by lossless-json (stored as an object to keep its exact digits). */
-export function isLosslessNumber(value) {
+function isLosslessNumber(value) {
   return losslessJson !== null && losslessJson.isLosslessNumber(value);
 }
 
@@ -85,11 +86,15 @@ export function getNumberText(number) {
   return isLosslessNumber(number) ? number.value : String(number);
 }
 
+/**
+ * Sorts object keys at every level. The order is by Unicode code, the same everywhere and the same as
+ * `jq -S` and Python's sort_keys (so capitals come before lowercase), rather than the visitor's language order.
+ */
 export function sortKeysDeep(value) {
   if (isPrimitive(value)) return value;
   if (Array.isArray(value)) return value.map(sortKeysDeep);
 
-  const sortedKeys = Object.keys(value).sort((first, second) => first.localeCompare(second));
+  const sortedKeys = Object.keys(value).sort();
   const sorted = {};
   for (const key of sortedKeys) sorted[key] = sortKeysDeep(value[key]);
   return sorted;

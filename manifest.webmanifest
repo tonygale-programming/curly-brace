@@ -1,6 +1,6 @@
 {
-  "name": "Brace JSON Formatter",
-  "short_name": "Brace",
+  "name": "Curly Brace JSON Formatter",
+  "short_name": "Curly Brace",
   "description": "Format, validate and repair JSON. Private: nothing you paste leaves your device.",
   "start_url": "./",
   "scope": "./",

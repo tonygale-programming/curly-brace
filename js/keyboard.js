@@ -42,12 +42,14 @@ function matches(keys, event) {
 }
 
 const isTypingInAField = (target) => target.matches('textarea, input, select');
+const isDialogOpen = () => document.querySelector('dialog[open]') !== null;
 
 /**
  * @param shortcuts list of { label, group, keys: [combination, …], run, button?, notWhileTyping? }
  */
 export function bindShortcuts(shortcuts) {
   document.addEventListener('keydown', (event) => {
+    if (isDialogOpen()) return; // the app's shortcuts shouldn't change things behind an open window
     const shortcut = shortcuts.find((candidate) => candidate.run
       && candidate.keys.some((keys) => matches(keys, event)));
     if (!shortcut) return;
@@ -64,8 +66,32 @@ export function bindShortcuts(shortcuts) {
   }
 }
 
-/** Fills the shortcuts dialog: a heading per group, then each action with its keys. */
-export function renderShortcutList(container, shortcuts) {
+/**
+ * Sets up the shortcuts window: fills the list, opens it from its button, and closes it with Close,
+ * Esc (the browser does that for dialogs) or a click on the dimmed area around it.
+ */
+export function setUpShortcutsDialog({ dialog, list, openButton, closeButton }, shortcuts) {
+  renderShortcutList(list, shortcuts);
+  openButton.addEventListener('click', () => dialog.showModal());
+  closeButton.addEventListener('click', () => dialog.close());
+  closeOnOutsideClick(dialog);
+}
+
+/**
+ * The browser reports clicks on the dimmed area around a dialog as clicks on the dialog itself,
+ * so the click's position decides whether it was inside the window or outside.
+ */
+function closeOnOutsideClick(dialog) {
+  dialog.addEventListener('click', (event) => {
+    const box = dialog.getBoundingClientRect();
+    const isOutside = event.clientX < box.left || event.clientX > box.right
+      || event.clientY < box.top || event.clientY > box.bottom;
+    if (isOutside) dialog.close();
+  });
+}
+
+/** Fills the shortcuts list: a heading per group, then each action with its keys. */
+function renderShortcutList(container, shortcuts) {
   const groups = [...new Set(shortcuts.map((shortcut) => shortcut.group))];
   container.innerHTML = groups.map((group) => {
     const rows = shortcuts.filter((shortcut) => shortcut.group === group).map((shortcut) => {

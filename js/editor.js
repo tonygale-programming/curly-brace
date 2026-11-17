@@ -12,6 +12,7 @@ import { highlightLine } from './highlighter.js';
 // Above this many characters, colouring on every keystroke would make typing slow.
 const COLOUR_LIMIT = 200_000;
 const LINES_SHOWN_ABOVE_ERROR = 3;
+const ERROR_LINE_CLASS = 'has-error';
 
 /**
  * @param elements { container, input, highlight, gutter }: the .editor, its textarea, the coloured
@@ -19,27 +20,47 @@ const LINES_SHOWN_ABOVE_ERROR = 3;
  */
 export function createEditor({ container, input, highlight, gutter }) {
   let errorLine = null;
+  let lineNumberCount = 0;
 
-  const lineHtml = (contentHtml, lineNumber) => (lineNumber === errorLine
-    ? `<span class="has-error">${contentHtml}</span>`
-    : `<span>${contentHtml}</span>`);
+  function renderColours(text, lines) {
+    const isPlain = text.length > COLOUR_LIMIT;
+    container.classList.toggle('is-plain', isPlain);
+    // In plain mode the copy is hidden but still sized by the text, so the field keeps its size.
+    highlight.innerHTML = isPlain
+      ? escapeHtml(`${text} `)
+      : lines.map((line) => `<span>${highlightLine(line) || ' '}</span>`).join('');
+  }
+
+  // Line numbers only change when the number of lines does, which is rare while typing.
+  function renderLineNumbers(lineCount) {
+    if (lineCount === lineNumberCount) return;
+    lineNumberCount = lineCount;
+    gutter.innerHTML = Array.from({ length: lineCount }, (unused, index) => `<span>${index + 1}</span>`).join('');
+  }
+
+  // Marks the error's line in the numbers and in the coloured copy, without rebuilding either.
+  function renderErrorLine() {
+    for (const layer of [gutter, highlight]) {
+      layer.querySelector(`.${ERROR_LINE_CLASS}`)?.classList.remove(ERROR_LINE_CLASS);
+      if (errorLine !== null) layer.children[errorLine - 1]?.classList.add(ERROR_LINE_CLASS);
+    }
+  }
 
   function render() {
     const text = input.value;
     const lines = text.split('\n');
-    const isPlain = text.length > COLOUR_LIMIT;
-
-    container.classList.toggle('is-plain', isPlain);
-    gutter.innerHTML = lines.map((line, index) => lineHtml(String(index + 1), index + 1)).join('');
-
-    // In plain mode the copy is hidden but still sized by the text, so the field keeps its size.
-    highlight.innerHTML = isPlain
-      ? escapeHtml(`${text} `)
-      : lines.map((line, index) => lineHtml(highlightLine(line) || ' ', index + 1)).join('');
+    renderColours(text, lines);
+    renderLineNumbers(lines.length);
+    renderErrorLine();
   }
 
   function getText() {
     return input.value;
+  }
+
+  /** True when the whole text is selected, so whatever is typed or pasted next replaces all of it. */
+  function isAllSelected() {
+    return input.selectionStart === 0 && input.selectionEnd === input.value.length;
   }
 
   /**
@@ -70,7 +91,7 @@ export function createEditor({ container, input, highlight, gutter }) {
   function markErrorLine(lineNumber) {
     if (lineNumber === errorLine) return;
     errorLine = lineNumber;
-    render();
+    renderErrorLine();
   }
 
   /** Puts the cursor on a position and scrolls so a few lines above it stay visible. */
@@ -84,5 +105,5 @@ export function createEditor({ container, input, highlight, gutter }) {
   input.addEventListener('input', render);
   render();
 
-  return { getText, setText, markErrorLine, showPosition, render };
+  return { getText, setText, isAllSelected, markErrorLine, showPosition };
 }

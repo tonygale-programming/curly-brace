@@ -1,14 +1,15 @@
 /**
- * Offline support: keeps a copy of every file the page needs, so Brace opens
+ * Offline support: keeps a copy of every file the page needs, so Curly Brace opens
  * without a network connection after the first visit.
  *
  * RELEASE must match the ?v= value in index.html; scripts/release.py updates both.
  * Each release gets its own cache, and older caches are deleted when it takes over.
  */
 
-const RELEASE = '2026-11-15.3';
-const CACHE_PREFIX = 'brace-';
+const RELEASE = '2026-11-17.1';
+const CACHE_PREFIX = 'curly-brace-';
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE}`;
+const OLD_CACHE_PREFIX = 'brace-'; // caches from before the rename to Curly Brace
 const PAGE_URL = './';
 
 // Files that index.html loads with ?v=<release> in the URL (the tab icon too)
@@ -24,6 +25,9 @@ const VERSIONED_FILES = [
   'js/download.js',
   'js/highlighter.js',
   'js/tree-view.js',
+  'js/tree-panel.js',
+  'js/sort-memory.js',
+  'js/files.js',
   'js/notifications.js',
   'js/keyboard.js',
   'js/storage.js',
@@ -72,13 +76,15 @@ self.addEventListener('fetch', (event) => {
 
 async function saveFilesForOffline() {
   const cache = await caches.open(CACHE_NAME);
-  await cache.addAll(FILES_TO_CACHE);
+  // 'reload' skips the browser's own cache, which may still hold the previous release's page for a few minutes
+  await cache.addAll(FILES_TO_CACHE.map((url) => new Request(url, { cache: 'reload' })));
   await self.skipWaiting(); // take over right away instead of waiting for every tab to close
 }
 
 async function deleteOlderReleases() {
   const cacheNames = await caches.keys();
-  const olderReleases = cacheNames.filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME);
+  const isOurs = (name) => name.startsWith(CACHE_PREFIX) || name.startsWith(OLD_CACHE_PREFIX);
+  const olderReleases = cacheNames.filter((name) => isOurs(name) && name !== CACHE_NAME);
   await Promise.all(olderReleases.map((name) => caches.delete(name)));
   await self.clients.claim();
 }

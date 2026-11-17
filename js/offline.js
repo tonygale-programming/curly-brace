@@ -1,7 +1,7 @@
 /**
  * Turns on offline use by registering service-worker.js.
  * If the browser doesn't support it (or blocks it, as some private windows do),
- * nothing changes: Brace works the same, just not without a connection.
+ * nothing changes: Curly Brace works the same, just not without a connection.
  */
 
 const SERVICE_WORKER_URL = 'service-worker.js';
