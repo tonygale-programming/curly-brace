@@ -1,0 +1,36 @@
+# Runs on every push and pull request: the release check, the unit tests and the browser tests.
+# The site itself has no build step; this only checks it.
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/browser/package-lock.json
+
+      - name: Release check (versions, security policy hashes, module lists, changelog)
+        run: python3 scripts/release.py --check
+
+      - name: Unit tests
+        run: node --test tests/unit/
+
+      - name: Browser tests (installed Chrome)
+        working-directory: tests/browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          npm ci --ignore-scripts
+          npm test
