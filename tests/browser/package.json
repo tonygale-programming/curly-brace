@@ -4,7 +4,7 @@
   "description": "Browser tests for Curly Brace. The site itself has no dependencies; this folder only drives Chrome.",
   "type": "module",
   "scripts": {
-    "test": "node --test --test-concurrency=1",
+    "test": "node --test --test-concurrency=1 *.test.mjs",
     "preview-image": "node render-preview.mjs"
   },
   "devDependencies": {

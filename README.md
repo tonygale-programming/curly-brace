@@ -137,7 +137,7 @@ in `service-worker.js`.
 Unit tests need only Node 20 or later:
 
 ```bash
-node --test tests/unit/
+node --test tests/unit/*.test.mjs
 ```
 
 Browser tests drive the Chrome installed on your computer (nothing is downloaded but the small

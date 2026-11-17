@@ -67,7 +67,7 @@ no third-party requests, no server storage, no analytics.
 
 - Serve locally: `python3 -m http.server 8765 --bind 127.0.0.1` in this folder, then open
   http://127.0.0.1:8765/. Modules don't load from `file://`.
-- **Tests** live in the repo: `node --test tests/unit/` and `cd tests/browser && npm install && npm test`
+- **Tests** live in the repo: `node --test tests/unit/*.test.mjs` and `cd tests/browser && npm install && npm test`
   (installed Chrome via playwright-core; `CHROME_PATH` overrides the macOS default). Run both before a commit,
   and add a test with every fix or feature.
 - The Claude app's built-in browser blocks service workers and its screenshots can be stale, so check
