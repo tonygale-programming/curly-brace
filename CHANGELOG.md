@@ -3,6 +3,14 @@
 What changed in Curly Brace (called Brace until 17 November 2026), day by day. Newest first. Each day lists what people using the site would notice,
 then changes behind the scenes. Release versions match the `?v=` value in `index.html`.
 
+## 18 November 2026
+
+Release `2026-11-18.1`.
+
+**Fixed**
+- Pressing Format, Minify, Sort keys, Sample or Repair with the keyboard now keeps focus on that button.
+  Before, focus jumped into the field.
+
 ## 17 November 2026
 
 Release `2026-11-17.1`.

@@ -109,6 +109,19 @@ test('shortcuts window: opens with ?, ignores other shortcuts, closes with Esc o
   assert.ok(await page.isHidden('#shortcuts-dialog'));
 });
 
+test('pressing a button with the keyboard keeps focus on it', async () => {
+  const { page } = site;
+  await typeIntoField(page, '{"a": [1]}');
+  await page.focus('#minify-button');
+  await page.keyboard.press('Enter');
+  assert.equal(await fieldText(page), '{"a":[1]}');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'minify-button');
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Enter');
+  assert.equal(await fieldText(page), '{\n  "a": [\n    1\n  ]\n}');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'format-button');
+});
+
 test('typing ? in the field types it, without opening the window', async () => {
   const { page } = site;
   await typeIntoField(page, '');

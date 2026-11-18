@@ -6,7 +6,7 @@
  * Each release gets its own cache, and older caches are deleted when it takes over.
  */
 
-const RELEASE = '2026-11-17.1';
+const RELEASE = '2026-11-18.1';
 const CACHE_PREFIX = 'curly-brace-';
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE}`;
 const OLD_CACHE_PREFIX = 'brace-'; // caches from before the rename to Curly Brace

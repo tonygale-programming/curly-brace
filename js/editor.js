@@ -70,6 +70,9 @@ export function createEditor({ container, input, highlight, gutter }) {
   function setText(text, { undoable = true } = {}) {
     let replaced = false;
     if (undoable) {
+      // insertText only works in the focused field; afterwards focus goes back to the button that was
+      // pressed, so keyboard users keep their place
+      const previousFocus = document.activeElement;
       input.focus({ preventScroll: true });
       input.select();
       try {
@@ -77,6 +80,7 @@ export function createEditor({ container, input, highlight, gutter }) {
       } catch {
         replaced = false;
       }
+      if (previousFocus instanceof HTMLButtonElement) previousFocus.focus({ preventScroll: true });
     }
     if (!replaced) input.value = text;
 

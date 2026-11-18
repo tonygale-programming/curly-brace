@@ -20,7 +20,6 @@ Each is small (S = an hour or two, M = about a day).
 
 | Idea | Why it helps | How, simply | Size |
 |---|---|---|---|
-| **Indent as `2 · 4 · Tab` segments** | One click instead of opening a dropdown, and the choice is always visible | The same segmented control as Text · Tree; removes the custom dropdown code | S |
 | **Cursor position** | Developers expect "Ln 12, Col 5" next to line numbers | Show it in the status row, from `selectionStart` and the existing `getLineAndColumn` | S |
 | **Remember the output mode** | Someone who always minifies has to click Minify every visit | Remember the last of Format / Minify for paste and open, like the indent setting | S |
 | **Wrap long lines** | Long string values push the text far to the right | A "Wrap" toggle next to Text · Tree; remembered like the theme | S |
@@ -74,4 +73,5 @@ Built (see CHANGELOG.md): Download as file, Copy a value from the tree, Drop a f
 | Ads, analytics, cookie banners | Same reason, and they slow the page down |
 | A graph view (boxes and arrows) | Hard to read on real data and a lot of code to maintain |
 | Dozens of converters (XML, YAML, CSV, …) on separate pages | Turns one clear tool into a maze; CSV comes with the table view only |
+| Indent as `2 · 4 · Tab` buttons | Tried on 18 November 2026: "2" and "4" need a label or units, and then the control is wider and busier. The dropdown is clearer |
 | A full code editor (Monaco) | Several megabytes for a quick-look tool. If the input box needs more, CodeMirror 6 is the lighter option |
